@@ -6,11 +6,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from basecamp.errors import BasecampError
+
 from ashrae_basecamp.client import ConfigError, connect
 from ashrae_basecamp.content import document_brief, extract_links, html_fragment, html_to_text
 from ashrae_basecamp.documents import append_document, get_document, update_document
 from ashrae_basecamp.urls import UrlError, document_id_from, parse_basecamp_url
-from basecamp.errors import BasecampError
 
 
 def _die(message: str, code: int = 1) -> None:
