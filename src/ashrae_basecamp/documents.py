@@ -2,71 +2,61 @@ from __future__ import annotations
 
 from typing import Any
 
+from ashrae_basecamp.cli_runner import DEFAULT_PROJECT_ID, run_basecamp
 from ashrae_basecamp.content import html_fragment
-
-
-def merge_document(
-    current: dict[str, Any],
-    *,
-    title: str | None = None,
-    content: str | None = None,
-) -> dict[str, str]:
-    """Build a full PUT body. Omitted fields keep the current values."""
-    merged_title = current["title"] if title is None else title
-    if content is None:
-        merged_content = current.get("content") or ""
-    else:
-        merged_content = content
-    if merged_title is None:
-        raise ValueError("document title is missing")
-    return {"title": str(merged_title), "content": str(merged_content)}
+from ashrae_basecamp.urls import document_id_from, parse_basecamp_url
 
 
 def append_content(current_content: str | None, fragment: str) -> str:
-    existing = current_content or ""
-    return existing + fragment
+    return (current_content or "") + fragment
 
 
-def get_document(account: Any, document_id: int) -> dict[str, Any]:
-    return account.documents.get(document_id=document_id)
+def _project_id(target: str, doc: dict[str, Any] | None = None) -> str:
+    ref = parse_basecamp_url(target)
+    if ref.bucket_id is not None:
+        return str(ref.bucket_id)
+    if doc:
+        bucket = doc.get("bucket") or {}
+        if bucket.get("id"):
+            return str(bucket["id"])
+    return DEFAULT_PROJECT_ID
 
 
-def update_document(
-    account: Any,
-    document_id: int,
-    *,
-    title: str | None = None,
-    content: str | None = None,
-) -> dict[str, Any]:
-    current = get_document(account, document_id)
-    payload = merge_document(current, title=title, content=content)
-    return account.documents.replace(document_id=document_id, **payload)
+def show_document(target: str) -> dict[str, Any]:
+    ref = parse_basecamp_url(target)
+    document_id = document_id_from(target)
+    data = run_basecamp(
+        "files",
+        "show",
+        str(document_id),
+        "--in",
+        _project_id(target),
+    )
+    if not isinstance(data, dict):
+        raise TypeError(f"Unexpected files show payload for {ref.resource_id}")
+    return data
 
 
 def append_document(
-    account: Any,
-    document_id: int,
+    target: str,
     *,
     text: str | None = None,
     html: str | None = None,
 ) -> dict[str, Any]:
     fragment = html_fragment(text=text, html_body=html)
-    current = get_document(account, document_id)
-    payload = merge_document(current, content=append_content(current.get("content"), fragment))
-    return account.documents.replace(document_id=document_id, **payload)
-
-
-def create_document(
-    account: Any,
-    vault_id: int,
-    *,
-    title: str,
-    content: str,
-    status: str = "active",
-) -> dict[str, Any]:
-    return account.documents.create(
-        vault_id=vault_id,
-        title=title,
-        content=content,
-        status=status,
+    current = show_document(target)
+    new_content = append_content(current.get("content"), fragment)
+    document_id = current.get("id") or document_id_from(target)
+    data = run_basecamp(
+        "files",
+        "update",
+        str(document_id),
+        "--content",
+        "-",
+        "--in",
+        _project_id(target, current),
+        stdin=new_content,
     )
+    if isinstance(data, dict):
+        return data
+    return show_document(target)

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "basecamp": {
+      "type": "stdio",
+      "command": "basecamp",
+      "args": ["mcp"]
+    }
+  }
+}

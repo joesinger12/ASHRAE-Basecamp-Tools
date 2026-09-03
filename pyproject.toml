@@ -5,12 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ashrae-basecamp"
 version = "0.1.0"
-description = "Small Python tools for ASHRAE work on the Basecamp API"
+description = "ASHRAE helpers on top of the official Basecamp CLI"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-    "basecamp-sdk",
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest"]
