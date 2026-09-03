@@ -12,22 +12,37 @@ pip install -e ".[dev]"
 
 ## Auth
 
-Basecamp uses OAuth access tokens (they expire about every two weeks). There is no API key.
+Basecamp’s API does **not** accept a username and password (no Basic auth). You still sign in with your Basecamp email/password, but only on Basecamp’s own website during OAuth. This tool never sees your password.
 
-1. Copy `.env.example` to `.env`
-2. Put a token in `BASECAMP_TOKEN`
-3. Keep `BASECAMP_ACCOUNT_ID=3106353` unless you need another account
+### Get a token (official CLI)
 
-Ways to mint a token:
+```bash
+# https://github.com/basecamp/basecamp-cli
+basecamp auth login
+basecamp auth token
+```
 
-- Official [Basecamp CLI](https://github.com/basecamp/basecamp-cli) login, then copy the access token
-- Register an integration at [Launchpad](https://launchpad.37signals.com/integrations) and complete the OAuth flow
+`auth login` opens a browser. Sign in there, then copy the token into `.env`:
 
-The CLI also reads `BASECAMP_TOKEN` / `BASECAMP_ACCOUNT_ID` from the environment if they are already set.
+```
+BASECAMP_TOKEN=...
+BASECAMP_ACCOUNT_ID=3106353
+```
+
+Or run `ashrae-bc login`, which uses device flow when Basecamp advertises it, otherwise the official `basecamp` CLI if it is installed.
+
+Then:
+
+```bash
+ashrae-bc whoami
+```
+
+Tokens last about two weeks. The CLI also reads `BASECAMP_TOKEN` / `BASECAMP_ACCOUNT_ID` from the environment if they are already set.
 
 ## CLI
 
 ```bash
+ashrae-bc login
 ashrae-bc whoami
 ashrae-bc get https://3.basecamp.com/3106353/buckets/352581/documents/10269026711
 ashrae-bc get 10269026711 --format text

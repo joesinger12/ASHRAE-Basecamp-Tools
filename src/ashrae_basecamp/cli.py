@@ -8,7 +8,7 @@ from typing import Any
 
 from basecamp.errors import BasecampError
 
-from ashrae_basecamp.client import ConfigError, connect
+from ashrae_basecamp.client import ConfigError, connect, get_authorization, login
 from ashrae_basecamp.content import document_brief, extract_links, html_fragment, html_to_text
 from ashrae_basecamp.documents import append_document, get_document, update_document
 from ashrae_basecamp.urls import UrlError, document_id_from, parse_basecamp_url
@@ -34,7 +34,7 @@ def _account_for(url_or_id: str, default_account: str | int) -> tuple[Any, Any, 
 
 def cmd_whoami(_args: argparse.Namespace) -> int:
     client, account = connect()
-    info = client.authorization.get()
+    info = get_authorization(client)
     identity = info.get("identity") or {}
     print(f"account: {account.account_id}")
     name = " ".join(part for part in (identity.get("first_name"), identity.get("last_name")) if part)
@@ -42,13 +42,23 @@ def cmd_whoami(_args: argparse.Namespace) -> int:
         print(f"name: {name}")
     if identity.get("email_address"):
         print(f"email: {identity['email_address']}")
+    if identity.get("id") and not name:
+        print(f"identity_id: {identity['id']}")
     if info.get("expires_at"):
         print(f"expires_at: {info['expires_at']}")
-    accounts = [a for a in info.get("accounts") or [] if a.get("product") == "bc3"]
+    if info.get("scope"):
+        print(f"scope: {info['scope']}")
+    accounts = info.get("accounts") or []
     if accounts:
         print("accounts:")
         for item in accounts:
             print(f"  {item.get('id')}: {item.get('name')}")
+    return 0
+
+
+def cmd_login(_args: argparse.Namespace) -> int:
+    path = login()
+    print(f"Saved token to {path}. It is not printed. Run `ashrae-bc whoami` next.")
     return 0
 
 
@@ -139,6 +149,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     whoami = sub.add_parser("whoami", help="Show the authenticated Basecamp identity")
     whoami.set_defaults(func=cmd_whoami)
+
+    login_p = sub.add_parser("login", help="Sign in via browser (OAuth device flow) and save BASECAMP_TOKEN to .env")
+    login_p.set_defaults(func=cmd_login)
 
     get_p = sub.add_parser("get", help="Fetch a document")
     get_p.add_argument("target", help="Document URL or id")
